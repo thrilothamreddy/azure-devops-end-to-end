@@ -1,5 +1,5 @@
 
-name: FastAPI CI Pipeline
+name: FastAPI CI CD Pipeline
 
 on:
   push:
@@ -8,6 +8,10 @@ on:
   pull_request:
     branches:
       - main
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build:
@@ -36,3 +40,21 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t cloudops-api:ci .
+
+      - name: Login to GitHub Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
